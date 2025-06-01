@@ -1,0 +1,7 @@
+@font-face {
+  font-family: "MyFont";
+  src: url("/public/fonts/IRAN-Rounded.woff") format("woff");
+  src: url("/public/fonts/IRAN-Rounded.eot") format("eot");
+  font-weight: normal;
+  font-style: normal;
+}
