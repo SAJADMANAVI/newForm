@@ -5,3 +5,35 @@
   font-weight: normal;
   font-style: normal;
 }
+
+.bb1 {
+  border-bottom: solid #198754 3px;
+}
+
+.bb2 {
+  border-bottom: solid black 1px;
+}
+
+.rmdp-input {
+  height: 37px !important;
+  min-height: 37px !important;
+  line-height: 1.5 !important;
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
+
+.max-w-screen-lg {
+  max-width: 1280px;
+}
+
+.css-19lfoqt {
+  padding: 0 !important;
+}
+
+.css-1xc3v61-indicatorContainer {
+  padding: 0 !important;
+}
+
+.css-15lsz6c-indicatorContainer {
+  padding: 0 !important;
+}
