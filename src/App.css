@@ -1,9 +1,25 @@
 @font-face {
-  font-family: "MyFont";
+  font-family: "MyFontIran";
   src: url("/public/fonts/IRAN-Rounded.woff") format("woff");
   src: url("/public/fonts/IRAN-Rounded.eot") format("eot");
   font-weight: normal;
   font-style: normal;
+}
+
+@font-face {
+  font-family: MyFontTitre;
+  src: url("/public/fonts/BTitrBold.ttf") format("ttf");
+  src: url("/public/fonts/BTitrBold.woff") format("woff");
+  src: url("/public/fonts/BTitrBold.woff2") format("wpff2");
+  font-weight: normal;
+  font-style: normal;
+}
+
+.main-title-of-page {
+  font-family: MyFontTitre;
+  font-size: 30px;
+  color: #198754;
+  text-shadow: 0 0px 4px #02110a;
 }
 
 .bb1 {
@@ -36,4 +52,52 @@
 
 .css-15lsz6c-indicatorContainer {
   padding: 0 !important;
+}
+
+.custom-checkbox {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  appearance: none;
+  background: #fff;
+  border: 2px solid #198754;
+  border-radius: 5px;
+  transition: box-shadow 0.2s;
+  cursor: pointer;
+  outline: none;
+  vertical-align: middle;
+  display: inline-block;
+  margin: 0 4px 0 0; /* فاصله کمتر */
+  padding: 0;
+}
+.custom-checkbox:checked {
+  background: #198754;
+  border-color: #198754;
+}
+.custom-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 6px;
+  height: 11px;
+  border: solid #fff;
+  border-width: 0 2.5px 2.5px 0;
+  border-radius: 2px;
+  transform: rotate(45deg) scale(1);
+  animation: checkmark 1s cubic-bezier(0.4, 2.08, 0.55, 0.44);
+}
+@keyframes checkmark {
+  0% {
+    transform: rotate(45deg) scale(0);
+  }
+  100% {
+    transform: rotate(45deg) scale(1);
+  }
+}
+
+.parentOfform {
+  padding: 1rem;
+  border-radius: 10px;
+  box-shadow: 0px 0px 30px #000000;
 }
