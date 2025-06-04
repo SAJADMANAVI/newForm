@@ -10,7 +10,12 @@ import {
   majors,
   alefOptions,
 } from "./constants";
+import axios from "axios";
+
+// Define personalPic and lastKarname with initial values
+
 function MainOfMyPage() {
+  const [personalPic, setPersonalPic] = useState(null);
   const [address, setAddress] = useState("");
   const [addressError, setAddressError] = useState("");
   const [formDisabled, setFormDisabled] = useState(false);
@@ -93,7 +98,12 @@ function MainOfMyPage() {
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    console.log("📷 تصویر انتخاب شد (handleImageChange):", file);
+    if (!file) {
+      console.error("No file selected for personalPic.");
+      return;
+    }
+    setPersonalPic(file);
 
     if (!file.type.startsWith("image/")) {
       setImageError("لطفا فقط فایل عکس انتخاب کنید.");
@@ -133,7 +143,12 @@ function MainOfMyPage() {
 
   const handleReportCardChange = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    console.log("📄 کارنامه انتخاب شد (handleReportCardChange):", file);
+    if (!file) {
+      console.error("No file selected for reportCardFile.");
+      return;
+    }
+    setReportCardFile(file);
 
     if (!file.type.startsWith("image/")) {
       setReportCardError("لطفا فقط فایل عکس انتخاب کنید.");
@@ -151,6 +166,7 @@ function MainOfMyPage() {
 
     setReportCardError("");
     setReportCardFile(file);
+
     const url = URL.createObjectURL(file);
     setReportCardUrl(url);
   };
@@ -179,107 +195,59 @@ function MainOfMyPage() {
       setter(value);
     };
 
-  const handleSubmit = (e) => {
+  // Updated handleSubmit function to ensure proper validation and submission of form data
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("personalPic before submission:", personalPic);
+    console.log("reportCardFile before submission:", reportCardFile);
 
+    // اعتبارسنجی اولیه
     let newErrors = {};
     let parentErr = {};
     let motherErr = {};
-    let valid = true;
-
-    if (!firstName) {
-      newErrors.firstName = "نام را وارد کنید";
-      valid = false;
-    }
-    if (!lastName) {
-      newErrors.lastName = "نام خانوادگی را وارد کنید";
-      valid = false;
-    }
-    if (!fatherName) {
-      newErrors.fatherName = "نام پدر را وارد کنید";
-      valid = false;
-    }
-    if (!nationalCode) {
-      newErrors.nationalCode = "شماره ملی را وارد کنید";
-      valid = false;
-    } else if (nationalCode.length !== 10) {
+    let eduErr = {};
+    if (!firstName) newErrors.firstName = "نام را وارد کنید";
+    if (!lastName) newErrors.lastName = "نام خانوادگی را وارد کنید";
+    if (!fatherName) newErrors.fatherName = "نام پدر را وارد کنید";
+    if (!nationalCode) newErrors.nationalCode = "شماره ملی را وارد کنید";
+    else if (nationalCode.length !== 10)
       newErrors.nationalCode = "شماره ملی باید ۱۰ رقم باشد";
-      valid = false;
-    }
-    if (!birthDate) {
-      newErrors.birthDate = "تاریخ تولد را وارد کنید";
-      valid = false;
-    }
-    if (!birthPlace) {
-      newErrors.birthPlace = "محل تولد را انتخاب کنید";
-      valid = false;
-    }
-    if (!grade) {
-      newErrors.grade = "پایه تحصیلی را انتخاب کنید";
-      valid = false;
-    }
-    if (!major) {
-      newErrors.major = "رشته تحصیلی را انتخاب کنید";
-      valid = false;
-    }
-    if (!serialAlpha) {
+    if (!birthDate) newErrors.birthDate = "تاریخ تولد را وارد کنید";
+    if (!birthPlace?.value) newErrors.birthPlace = "محل تولد را انتخاب کنید";
+    if (!grade?.value) newErrors.grade = "پایه تحصیلی را انتخاب کنید";
+    if (!major?.value) newErrors.major = "رشته تحصیلی را انتخاب کنید";
+    if (!serialAlpha?.value)
       newErrors.serialAlpha = "حرف الف سریال را انتخاب کنید";
-      valid = false;
-    }
-    if (!serialNumber) {
+    if (!serialNumber)
       newErrors.serialNumber = "بخش اول سریال شناسنامه را وارد کنید";
-      valid = false;
-    } else if (serialNumber.length !== 2) {
-      newErrors.serialNumber = "بخش اول سریال باید ۲ رقم باشد";
-      valid = false;
-    }
-    if (!serialNumber2) {
+    else if (serialNumber.length !== 2)
+      newErrors.serialNumber = "باید ۲ رقم باشد";
+    if (!serialNumber2)
       newErrors.serialNumber2 = "بخش دوم سریال شناسنامه را وارد کنید";
-      valid = false;
-    } else if (serialNumber2.length !== 3) {
-      newErrors.serialNumber2 = "بخش دوم سریال باید ۳ رقم باشد";
-      valid = false;
-    }
-    if (!contactNumber) {
-      newErrors.contactNumber = "شماره تماس را وارد کنید";
-      valid = false;
-    } else if (contactNumber.length !== 11) {
-      newErrors.contactNumber = "شماره تماس باید ۱۱ رقم باشد";
-      valid = false;
-    }
-    if (!homeNumber) {
-      newErrors.homeNumber = "شماره منزل را وارد کنید";
-      valid = false;
-    } else if (homeNumber.length !== 11) {
-      newErrors.homeNumber = "شماره منزل باید ۱۱ رقم باشد";
-      valid = false;
-    }
-    if (address.trim() === "") {
-      setAddressError("وارد کردن آدرس الزامی است.");
-      valid = false;
-    } else {
-      setAddressError("");
-    }
-    if (!imageFile) {
-      setImageError("آپلود عکس الزامی است.");
-      valid = false;
-    } else {
-      setImageError("");
-    }
-
+    else if (serialNumber2.length !== 3)
+      newErrors.serialNumber2 = "باید ۳ رقم باشد";
+    if (!contactNumber) newErrors.contactNumber = "شماره تماس را وارد کنید";
+    else if (contactNumber.length !== 11)
+      newErrors.contactNumber = "باید ۱۱ رقم باشد";
+    if (!homeNumber) newErrors.homeNumber = "شماره منزل را وارد کنید";
+    else if (homeNumber.length !== 11)
+      newErrors.homeNumber = "باید ۱۱ رقم باشد";
+    if (address.trim() === "") setAddressError("وارد کردن آدرس الزامی است.");
+    else setAddressError("");
+    if (!personalPic) setImageError("آپلود عکس الزامی است.");
+    else setImageError("");
     if (!parentFirstName) parentErr.parentFirstName = "نام پدر را وارد کنید";
     if (!parentLastName) parentErr.parentLastName = "نام خانوادگی را وارد کنید";
     if (!parentJob) parentErr.parentJob = "شغل را وارد کنید";
     if (!parentContact) parentErr.parentContact = "شماره تماس را وارد کنید";
     else if (parentContact.length !== 11)
-      parentErr.parentContact = "شماره تماس باید ۱۱ رقم باشد";
+      parentErr.parentContact = "باید ۱۱ رقم باشد";
     if (!parentNationalCode)
       parentErr.parentNationalCode = "کد ملی پدر را وارد کنید";
     if (!parentEducation) parentErr.parentEducation = "تحصیلات را وارد کنید";
     if (!parentWorkAddress)
       parentErr.parentWorkAddress = "آدرس محل کار را وارد کنید";
     setParentErrors(parentErr);
-
     if (!motherFirstName) motherErr.motherFirstName = "نام مادر را وارد کنید";
     if (!motherLastName)
       motherErr.motherLastName = "نام خانوادگی مادر را وارد کنید";
@@ -287,7 +255,7 @@ function MainOfMyPage() {
     if (!motherContact)
       motherErr.motherContact = "شماره تماس مادر را وارد کنید";
     else if (motherContact.length !== 11)
-      motherErr.motherContact = "شماره تماس باید ۱۱ رقم باشد";
+      motherErr.motherContact = "باید ۱۱ رقم باشد";
     if (!motherNationalCode)
       motherErr.motherNationalCode = "کد ملی مادر را وارد کنید";
     if (!motherEducation)
@@ -295,101 +263,89 @@ function MainOfMyPage() {
     if (!motherWorkAddress)
       motherErr.motherWorkAddress = "آدرس محل کار مادر را وارد کنید";
     setMotherErrors(motherErr);
-
-    let educationErr = {};
-    if (!prevSchool) {
-      setPrevSchoolError("نام آموزشگاه سال قبل را وارد کنید");
-      educationErr.prevSchool = true;
-    } else {
-      setPrevSchoolError("");
-    }
-    if (!prevAvg) {
-      setPrevAvgError("معدل کل سال قبل را وارد کنید");
-      educationErr.prevAvg = true;
-    } else {
-      setPrevAvgError("");
-    }
-    if (!prevDiscipline) {
-      setPrevDisciplineError("انضباط سال گذشته را وارد کنید");
-      educationErr.prevDiscipline = true;
-    } else {
-      setPrevDisciplineError("");
-    }
-
-    if (!reportCardFile) {
-      setReportCardRequiredError("آپلود تصویر کارنامه الزامی است.");
-    } else {
-      setReportCardRequiredError("");
-    }
-
-    if (!acceptFee) {
-      setAcceptFeeError("لطفا تیک پذیرش هزینه را بزنید.");
-    } else {
-      setAcceptFeeError("");
-    }
-
+    if (!prevSchool) eduErr.prevSchool = "مدرسه قبلی را وارد کنید";
+    if (!prevAvg) eduErr.prevAvg = "معدل را وارد کنید";
+    if (!prevDiscipline) eduErr.prevDiscipline = "نمره انضباط را وارد کنید";
+    if (!reportCardFile) setReportCardError("آپلود کارنامه الزامی است.");
+    else setReportCardError("");
+    if (!acceptFee) setAcceptFeeError("پذیرش قوانین الزامی است.");
+    else setAcceptFeeError("");
     setErrors(newErrors);
-
-    const allErrors = [];
-    if (Object.keys(newErrors).length > 0)
-      allErrors.push({ type: "student", key: Object.keys(newErrors)[0] });
-    if (Object.keys(parentErr).length > 0)
-      allErrors.push({ type: "parent", key: Object.keys(parentErr)[0] });
-    if (Object.keys(motherErr).length > 0)
-      allErrors.push({ type: "mother", key: Object.keys(motherErr)[0] });
-    if (educationErr.prevSchool)
-      allErrors.push({ type: "education", key: "prevSchool" });
-    if (educationErr.prevAvg)
-      allErrors.push({ type: "education", key: "prevAvg" });
-    if (educationErr.prevDiscipline)
-      allErrors.push({ type: "education", key: "prevDiscipline" });
-    if (!acceptFee) allErrors.push({ type: "acceptFee", key: "acceptFee" });
-    if (!reportCardFile)
-      allErrors.push({ type: "reportCard", key: "reportCardSection" });
-
-    if (allErrors.length > 0) {
-      const first = allErrors[0];
-      if (first.type === "student" && refs[first.key]?.current) {
-        refs[first.key].current.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-        refs[first.key].current.focus();
-      } else if (first.type === "parent") {
-        document
-          .querySelector("input[name='parentFirstName']")
-          ?.scrollIntoView({ behavior: "smooth", block: "center" });
-      } else if (first.type === "mother") {
-        document
-          .querySelector("input[name='motherFirstName']")
-          ?.scrollIntoView({ behavior: "smooth", block: "center" });
-      } else if (first.type === "education") {
-        if (first.key === "prevSchool")
-          document
-            .querySelector("input[value='" + prevSchool + "']")
-            ?.scrollIntoView({ behavior: "smooth", block: "center" });
-        if (first.key === "prevAvg")
-          document
-            .querySelector("input[value='" + prevAvg + "']")
-            ?.scrollIntoView({ behavior: "smooth", block: "center" });
-        if (first.key === "prevDiscipline")
-          document
-            .querySelector("input[value='" + prevDiscipline + "']")
-            ?.scrollIntoView({ behavior: "smooth", block: "center" });
-      } else if (first.type === "acceptFee") {
-        document
-          .getElementById("acceptFee")
-          ?.scrollIntoView({ behavior: "smooth", block: "center" });
-      } else if (first.type === "reportCard") {
-        document
-          .getElementById("reportCardSection")
-          ?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+    // اگر خطا وجود داشت ارسال نکن
+    if (
+      Object.keys(newErrors).length > 0 ||
+      Object.keys(parentErr).length > 0 ||
+      Object.keys(motherErr).length > 0 ||
+      Object.keys(eduErr).length > 0 ||
+      !acceptFee ||
+      !personalPic ||
+      !reportCardFile
+    ) {
+      console.log("Validation failed. Errors:", newErrors);
       return;
     }
+    // ارسال داده‌ها
+    const formData = new FormData();
+    formData.append("st_personal_pic", personalPic);
+    formData.append("last_karname", reportCardFile);
+    formData.append("st_fname", firstName);
+    formData.append("st_lname", lastName);
+    formData.append("st_faname", fatherName);
+    formData.append("st_id_no", nationalCode);
+    formData.append("st_birthdate", birthDate);
+    formData.append("st_birthplace", birthPlace?.value);
+    formData.append("st_phone", contactNumber);
+    formData.append("st_home_phone", homeNumber);
+    formData.append("st_address", address);
+    formData.append("st_field", major?.value);
+    formData.append("st_grade", grade?.value);
+    formData.append("st_serial_alpha", serialAlpha?.value);
+    formData.append("st_serial_number", serialNumber);
+    formData.append("st_serial_number2", serialNumber2);
+    formData.append("fa_fname", parentFirstName);
+    formData.append("fa_lname", parentLastName);
+    formData.append("fa_job", parentJob);
+    formData.append("fa_work_address", parentWorkAddress);
+    formData.append("fa_phone", parentContact);
+    formData.append("fa_id_no", parentNationalCode);
+    formData.append("fa_education", parentEducation);
+    formData.append("mo_fname", motherFirstName);
+    formData.append("mo_lname", motherLastName);
+    formData.append("mo_work_address", motherWorkAddress);
+    formData.append("mo_job", motherJob);
+    formData.append("mo_phone", motherContact);
+    formData.append("mo_id_no", motherNationalCode);
+    formData.append("mo_education", motherEducation);
+    formData.append("last_school", prevSchool);
+    formData.append("last_avrage", prevAvg);
+    formData.append("last_enzebat", prevDiscipline);
+    formData.append(
+      "st_series",
+      `${serialAlpha}${serialNumber}${serialNumber2}`
+    );
+    formData.append("st_id_card_exportion", "setIranSodoor");
 
-    setShowModal(true);
-    setFormDisabled(true);
+    for (let pair of formData.entries()) {
+      console.log("FormData entry:", pair[0], pair[1]);
+    }
+    try {
+      const res = await axios.post(
+        "https://mandegarhs.ir/amoozyar2/api/students/register",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      console.log("Server response:", res.data);
+    } catch (err) {
+      if (err.response) {
+        console.error("Server error response:", err.response.data);
+      } else {
+        console.error("An error occurred:", err.message);
+      }
+    }
   };
 
   const handleEdit = () => {
@@ -400,6 +356,41 @@ function MainOfMyPage() {
   const inputDisabledClass = formDisabled
     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
     : "";
+
+  const fillDummyData = () => {
+    setFirstName("علی");
+    setLastName("رضایی");
+    setFatherName("حسین");
+    setNationalCode("1234567890");
+    setBirthDate("2005-03-15");
+    setBirthPlace("تهران");
+    setIranSodoor("تهران");
+    setGrade(grades[0]);
+    setMajor("ریاضی");
+    setSerialAlpha("الف");
+    setSerialNumber("12");
+    setSerialNumber2("345");
+    setContactNumber("09123456789");
+    setHomeNumber("02530000000");
+    setAddress("No. 123, Main St, Tehran");
+    setParentFirstName("احمد");
+    setParentLastName("احمدی");
+    setParentJob("مهندس");
+    setParentContact("09129876543");
+    setParentNationalCode("0987654321");
+    setParentEducation("دیپلم");
+    setParentWorkAddress("456 Work St, Tehran");
+    setMotherFirstName("فاطمه");
+    setMotherLastName("محمدی");
+    setMotherJob("معلم");
+    setMotherContact("09128765432");
+    setMotherNationalCode("1122334455");
+    setMotherEducation("لیسانس");
+    setMotherWorkAddress("789 Office St");
+    setPrevSchool("شهید بهشتی");
+    setPrevAvg("12.22");
+    setPrevDiscipline("14.5");
+  };
 
   return (
     <main className="max-w-screen-lg mx-auto p-6 relative">
@@ -1723,6 +1714,12 @@ function MainOfMyPage() {
               </div>
             </form>
           </div>
+          <button
+            onClick={fillDummyData}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            پر کردن فرم با داده‌های نمونه
+          </button>
         </div>
       </div>
     </main>
