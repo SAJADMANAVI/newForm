@@ -11,21 +11,24 @@ import {
   alefOptions,
 } from "./constants";
 import axios from "axios";
+import Cropper from "react-easy-crop";
+import { getCroppedImg } from "./utils/cropImage"; // اصلاح ایمپورت برای استفاده از اکسپورت معمولی
 
 // Define personalPic and lastKarname with initial values
 
 function MainOfMyPage() {
-  const [personalPic, setPersonalPic] = useState(null);
   const [address, setAddress] = useState("");
   const [addressError, setAddressError] = useState("");
   const [formDisabled, setFormDisabled] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [xOffset, setXOffset] = useState(0);
 
-  const [imageFile, setImageFile] = useState(null);
-  const [imageUrl, setImageUrl] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [imageError, setImageError] = useState("");
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [croppedImage, setCroppedImage] = useState(null);
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [currentImageForCrop, setCurrentImageForCrop] = useState(null);
 
   const fileInputRef = useRef();
   const [firstName, setFirstName] = useState("");
@@ -43,7 +46,6 @@ function MainOfMyPage() {
   const [serialNumber2, setSerialNumber2] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [homeNumber, setHomeNumber] = useState("");
-  const [yOffset, setYOffset] = useState(0);
 
   const [parentFirstName, setParentFirstName] = useState("");
   const [parentLastName, setParentLastName] = useState("");
@@ -64,17 +66,17 @@ function MainOfMyPage() {
   const [motherErrors, setMotherErrors] = useState({});
 
   const [prevSchool, setPrevSchool] = useState("");
-  const [prevSchoolError, setPrevSchoolError] = useState("");
   const [prevAvg, setPrevAvg] = useState("");
-  const [prevAvgError, setPrevAvgError] = useState("");
   const [prevDiscipline, setPrevDiscipline] = useState("");
   const [prevDisciplineError, setPrevDisciplineError] = useState("");
+  const [prevSchoolError, setPrevSchoolError] = useState(""); // Define prevSchoolError state
+  const reportCardInputRef = useRef(null); // Ref for the report card input element
+  const [prevAvgError, setPrevAvgError] = useState(""); // State for managing previous average error
 
   const [errors, setErrors] = useState({});
   const [acceptFee, setAcceptFee] = useState(false);
   const [acceptFeeError, setAcceptFeeError] = useState("");
-  const [reportCardRequiredError, setReportCardRequiredError] = useState("");
-
+  const [reportCardError, setReportCardError] = useState("");
   const refs = {
     firstName: useRef(null),
     lastName: useRef(null),
@@ -96,88 +98,109 @@ function MainOfMyPage() {
     if (e.target.value.trim() !== "") setAddressError("");
   };
 
+  const openCropModal = (imageUrl) => {
+    setCurrentImageForCrop(imageUrl);
+    setIsCropModalOpen(true);
+  };
+
+  const closeCropModal = () => {
+    setIsCropModalOpen(false);
+    setCurrentImageForCrop(null);
+  };
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    console.log("📷 تصویر انتخاب شد (handleImageChange):", file);
     if (!file) {
-      console.error("No file selected for personalPic.");
+      console.error("No file selected.");
       return;
     }
-    setPersonalPic(file);
 
     if (!file.type.startsWith("image/")) {
       setImageError("لطفا فقط فایل عکس انتخاب کنید.");
-      setImageFile(null);
-      setImageUrl(null);
       return;
     }
 
     if (file.size > 150 * 1024) {
       setImageError("حجم عکس باید کمتر از ۱۵۰ کیلوبایت باشد.");
-      setImageFile(null);
-      setImageUrl(null);
       return;
     }
 
     setImageError("");
-    setImageFile(file);
-
     const url = URL.createObjectURL(file);
-    setImageUrl(url);
+    openCropModal(url);
   };
 
   const handleRemoveImage = () => {
-    setImageFile(null);
-    setImageUrl(null);
     setZoom(1);
     fileInputRef.current.value = null;
   };
 
   const [reportCardFile, setReportCardFile] = useState(null);
   const [reportCardUrl, setReportCardUrl] = useState(null);
-  const [reportCardError, setReportCardError] = useState("");
-  const reportCardInputRef = useRef();
   const [reportCardZoom, setReportCardZoom] = useState(1);
   const [reportCardXOffset, setReportCardXOffset] = useState(0);
   const [reportCardYOffset, setReportCardYOffset] = useState(0);
 
+  const [isReportCardCropModalOpen, setIsReportCardCropModalOpen] =
+    useState(false);
+  const [currentReportCardForCrop, setCurrentReportCardForCrop] =
+    useState(null);
+  const [reportCardCrop, setReportCardCrop] = useState({ x: 0, y: 0 });
+  const [reportCardCropZoom, setReportCardCropZoom] = useState(1);
+  const [reportCardCroppedAreaPixels, setReportCardCroppedAreaPixels] =
+    useState(null);
+  const [croppedReportCardImage, setCroppedReportCardImage] = useState(null);
+
+  const openReportCardCropModal = (imageUrl) => {
+    setCurrentReportCardForCrop(imageUrl);
+    setIsReportCardCropModalOpen(true);
+  };
+
+  const closeReportCardCropModal = () => {
+    setIsReportCardCropModalOpen(false);
+    setCurrentReportCardForCrop(null);
+  };
+
   const handleReportCardChange = (e) => {
     const file = e.target.files[0];
-    console.log("📄 کارنامه انتخاب شد (handleReportCardChange):", file);
     if (!file) {
       console.error("No file selected for reportCardFile.");
       return;
     }
-    setReportCardFile(file);
 
     if (!file.type.startsWith("image/")) {
       setReportCardError("لطفا فقط فایل عکس انتخاب کنید.");
-      setReportCardFile(null);
-      setReportCardUrl(null);
       return;
     }
 
     if (file.size > 150 * 1024) {
       setReportCardError("حجم عکس باید کمتر از ۱۵۰ کیلوبایت باشد.");
-      setReportCardFile(null);
-      setReportCardUrl(null);
       return;
     }
 
     setReportCardError("");
-    setReportCardFile(file);
-
     const url = URL.createObjectURL(file);
-    setReportCardUrl(url);
+    openReportCardCropModal(url);
   };
+
+  // const handleRemoveReportCard = () => {
+  //   setReportCardFile(null);
+  //   setReportCardUrl(null);
+  //   setReportCardZoom(1);
+  //   setReportCardXOffset(0);
+  //   setReportCardYOffset(0);
+  //   reportCardInputRef.current.value = null;
+  // };
 
   const handleRemoveReportCard = () => {
     setReportCardFile(null);
     setReportCardUrl(null);
     setReportCardZoom(1);
-    setReportCardXOffset(0);
-    setReportCardYOffset(0);
+    setReportCardCropZoom(1); // ← این خط مهمه
+    setReportCardCrop({ x: 0, y: 0 });
+    setReportCardCroppedAreaPixels(null);
     reportCardInputRef.current.value = null;
+    setCroppedReportCardImage(null);
   };
 
   const handlePersianInput = (setter) => (e) => {
@@ -198,8 +221,6 @@ function MainOfMyPage() {
   // Updated handleSubmit function to ensure proper validation and submission of form data
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("personalPic before submission:", personalPic);
-    console.log("reportCardFile before submission:", reportCardFile);
 
     // اعتبارسنجی اولیه
     let newErrors = {};
@@ -234,7 +255,7 @@ function MainOfMyPage() {
       newErrors.homeNumber = "باید ۱۱ رقم باشد";
     if (address.trim() === "") setAddressError("وارد کردن آدرس الزامی است.");
     else setAddressError("");
-    if (!personalPic) setImageError("آپلود عکس الزامی است.");
+    if (!croppedImage) setImageError("آپلود عکس الزامی است.");
     else setImageError("");
     if (!parentFirstName) parentErr.parentFirstName = "نام پدر را وارد کنید";
     if (!parentLastName) parentErr.parentLastName = "نام خانوادگی را وارد کنید";
@@ -278,16 +299,19 @@ function MainOfMyPage() {
       Object.keys(motherErr).length > 0 ||
       Object.keys(eduErr).length > 0 ||
       !acceptFee ||
-      !personalPic ||
-      !reportCardFile
+      !croppedImage ||
+      !croppedReportCardImage // Make sure cropped image exists
     ) {
-      console.log("Validation failed. Errors:", newErrors);
       return;
     }
     // ارسال داده‌ها
     const formData = new FormData();
-    formData.append("st_personal_pic", personalPic);
-    formData.append("last_karname", reportCardFile);
+    formData.append("st_personal_pic", croppedImage);
+    // Convert croppedReportCardImage (blob URL) to File and append
+    const response = await fetch(croppedReportCardImage);
+    const blob = await response.blob();
+    const file = new File([blob], "report_card.jpg", { type: blob.type });
+    formData.append("last_karname", file);
     formData.append("st_fname", firstName);
     formData.append("st_lname", lastName);
     formData.append("st_faname", fatherName);
@@ -325,11 +349,8 @@ function MainOfMyPage() {
     );
     formData.append("st_id_card_exportion", "setIranSodoor");
 
-    for (let pair of formData.entries()) {
-      console.log("FormData entry:", pair[0], pair[1]);
-    }
     try {
-      const res = await axios.post(
+      await axios.post(
         "https://mandegarhs.ir/amoozyar2/api/students/register",
         formData,
         {
@@ -338,7 +359,6 @@ function MainOfMyPage() {
           },
         }
       );
-      console.log("Server response:", res.data);
     } catch (err) {
       if (err.response) {
         console.error("Server error response:", err.response.data);
@@ -390,6 +410,78 @@ function MainOfMyPage() {
     setPrevSchool("شهید بهشتی");
     setPrevAvg("12.22");
     setPrevDiscipline("14.5");
+  };
+
+  const handlePrevSchoolChange = (e) => {
+    const value = e.target.value;
+    setPrevSchool(value);
+    if (value.trim() !== "") {
+      setPrevSchoolError("");
+    }
+  };
+
+  const onCropComplete = (croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  };
+
+  const handleCropImage = async () => {
+    if (!currentImageForCrop || !croppedAreaPixels) return;
+    try {
+      const croppedImg = await getCroppedImg(
+        currentImageForCrop,
+        croppedAreaPixels
+      );
+      setCroppedImage(croppedImg);
+      closeCropModal();
+    } catch (error) {
+      console.error("Error cropping image:", error);
+    }
+  };
+
+  // const handleCropReportCardImage = async () => {
+  //   if (!currentReportCardForCrop || !reportCardCroppedAreaPixels) return;
+  //   try {
+  //     const croppedImg = await getCroppedImg(
+  //       currentReportCardForCrop,
+  //       reportCardCroppedAreaPixels
+  //     );
+  //     setCroppedReportCardImage(croppedImg);
+  //     closeReportCardCropModal();
+  //   } catch (error) {
+  //     console.error("Error cropping report card image:", error);
+  //   }
+  // };
+
+  const handleCropReportCardImage = async () => {
+    if (!currentReportCardForCrop || !reportCardCroppedAreaPixels) return;
+
+    try {
+      const croppedImg = await getCroppedImg(
+        currentReportCardForCrop,
+        reportCardCroppedAreaPixels
+      );
+      setCroppedReportCardImage(croppedImg);
+      closeReportCardCropModal();
+
+      // 🔧 ریست کردن مقدارهای کراپ بعد از انجام کراپ
+      setReportCardCrop({ x: 0, y: 0 });
+      setReportCardCropZoom(1);
+      setReportCardCroppedAreaPixels(null);
+    } catch (error) {
+      console.error("Error cropping report card image:", error);
+    }
+  };
+
+  // Ensure croppedReportCardImage is only used in img tags
+  const renderCroppedReportCardImage = () => {
+    if (!croppedReportCardImage) return null;
+    return (
+      <img
+        src={croppedReportCardImage}
+        alt="کارنامه آپلود شده"
+        style={{ objectFit: "cover", width: "100%", height: "100%" }}
+      />
+    );
   };
 
   return (
@@ -1059,102 +1151,45 @@ function MainOfMyPage() {
                     بارگذاری عکس:
                   </label>
                   <div className="flex flex-col w-full items-center md:items-start">
-                    <div className="flex flex-col md:flex-row items-center justify-center md:items-start md:justify-start md:gap-8 w-full">
-                      <div
-                        className={`relative border-2 border-dashed rounded-md w-48 h-48 flex items-center justify-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition overflow-hidden ${
-                          imageError ? "border-red-500" : "border-gray-300"
-                        }`}
-                        onClick={() =>
-                          fileInputRef.current && fileInputRef.current.click()
-                        }
-                        style={{ direction: "ltr" }}
-                      >
-                        {imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt="آپلود شده"
-                            style={{
-                              transform: `scale(${zoom}) translateX(${xOffset}px) translateY(${yOffset}px)`,
-                              transition: "transform 0.2s",
-                              objectFit: "cover",
-                              width: "100%",
-                              height: "100%",
-                              pointerEvents: "none",
-                              userSelect: "none",
-                            }}
-                          />
-                        ) : (
-                          <span className="text-gray-400">
-                            برای آپلود کلیک کنید
-                          </span>
-                        )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          ref={fileInputRef}
-                          className="hidden"
+                    <div
+                      className={`relative border-2 border-dashed rounded-md w-48 h-48 flex items-center justify-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition overflow-hidden ${
+                        imageError ? "border-red-500" : "border-gray-300"
+                      }`}
+                      onClick={() =>
+                        fileInputRef.current && fileInputRef.current.click()
+                      }
+                      style={{ direction: "ltr" }}
+                    >
+                      {croppedImage ? (
+                        <img
+                          src={croppedImage}
+                          alt="آپلود شده"
+                          style={{
+                            objectFit: "cover",
+                            width: "100%",
+                            height: "100%",
+                          }}
                         />
-                      </div>
-
-                      {imageUrl && (
-                        <div className="flex flex-col gap-8 mt-6 md:mt-0 md:mr-8 items-center md:items-start">
-                          <div className="flex items-center gap-2 w-48">
-                            <span className="text-xs text-gray-500">+</span>
-                            <input
-                              type="range"
-                              min="1"
-                              max="3"
-                              step="0.01"
-                              value={zoom}
-                              onChange={(e) => setZoom(Number(e.target.value))}
-                              className="w-full accent-green-600"
-                              style={{ direction: "ltr" }}
-                            />
-                            <span className="text-xs text-gray-500">-</span>
-                          </div>
-                          <div className="flex items-center gap-2 w-48">
-                            <span className="text-xs text-gray-500">→</span>
-                            <input
-                              type="range"
-                              min="-60"
-                              max="60"
-                              step="1"
-                              value={xOffset}
-                              onChange={(e) =>
-                                setXOffset(Number(e.target.value))
-                              }
-                              className="w-full accent-blue-600"
-                              style={{ direction: "ltr" }}
-                            />
-                            <span className="text-xs text-gray-500">←</span>
-                          </div>
-                          <div className="flex items-center gap-2 w-48">
-                            <span className="text-xs text-gray-500">↑</span>
-                            <input
-                              type="range"
-                              min="-60"
-                              max="60"
-                              step="1"
-                              value={yOffset}
-                              onChange={(e) =>
-                                setYOffset(Number(e.target.value))
-                              }
-                              className="w-full accent-blue-600"
-                              style={{ direction: "ltr" }}
-                            />
-                            <span className="text-xs text-gray-500">↓</span>
-                            <button
-                              type="button"
-                              onClick={handleRemoveImage}
-                              className="ml-2 px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
-                            >
-                              حذف
-                            </button>
-                          </div>
-                        </div>
+                      ) : (
+                        <span className="text-gray-400">
+                          برای آپلود کلیک کنید
+                        </span>
                       )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        ref={fileInputRef}
+                        className="hidden"
+                      />
                     </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="mt-2 px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
+                    >
+                      حذف
+                    </button>
                     <span className="text-xs text-gray-500 mt-2 block">
                       حجم عکس باید کمتر از ۱۵۰ کیلوبایت باشد.
                     </span>
@@ -1484,7 +1519,7 @@ function MainOfMyPage() {
                   <input
                     type="text"
                     value={prevSchool}
-                    onChange={handlePersianInput(setPrevSchool)}
+                    onChange={handlePrevSchoolChange}
                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
                       prevSchoolError
                         ? "border-red-500 ring-red-400"
@@ -1576,27 +1611,27 @@ function MainOfMyPage() {
                 <div className="flex flex-col w-full items-center md:items-start">
                   <div className="flex flex-col md:flex-row items-center justify-center md:items-start md:justify-start md:gap-8 w-full">
                     <div
-                      className={`relative border-2 border-dashed rounded-md w-48 h-48 flex items-center justify-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition overflow-hidden ${
+                      className={`relative border-2 border-dashed rounded-md w-48 h-48 sm:w-40 sm:h-40 md:w-56 md:h-56 lg:w-64 lg:h-64 flex items-center justify-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition overflow-hidden ${
                         reportCardError ? "border-red-500" : "border-gray-300"
                       }`}
                       onClick={() =>
                         reportCardInputRef.current &&
                         reportCardInputRef.current.click()
                       }
-                      style={{ direction: "ltr" }}
+                      style={{
+                        direction: "ltr",
+                        maxWidth: "100%",
+                        maxHeight: "100%",
+                      }}
                     >
-                      {reportCardUrl ? (
+                      {croppedReportCardImage ? (
                         <img
-                          src={reportCardUrl}
+                          src={croppedReportCardImage}
                           alt="کارنامه آپلود شده"
                           style={{
-                            transform: `scale(${reportCardZoom}) translateX(${reportCardXOffset}px) translateY(${reportCardYOffset}px)`,
-                            transition: "transform 0.2s",
                             objectFit: "cover",
                             width: "100%",
                             height: "100%",
-                            pointerEvents: "none",
-                            userSelect: "none",
                           }}
                         />
                       ) : (
@@ -1680,11 +1715,6 @@ function MainOfMyPage() {
                       {reportCardError}
                     </p>
                   )}
-                  {reportCardRequiredError && (
-                    <p className="text-red-600 text-sm mt-1">
-                      {reportCardRequiredError}
-                    </p>
-                  )}
                 </div>
                 <div className="flex items-center gap-2 mt-4">
                   <input
@@ -1722,6 +1752,165 @@ function MainOfMyPage() {
           </button>
         </div>
       </div>
+      {/*
+      {croppedImage}
+      */}
+      {isCropModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-lg relative w-[90%] h-[80%] md:w-[70%] md:h-[70%]">
+            <div className="relative w-full h-[70%]">
+              <Cropper
+                image={currentImageForCrop}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+                style={{ containerStyle: { width: "100%", height: "100%" } }}
+              />
+            </div>
+            <div className="relative z-10 flex flex-col gap-4 mt-4">
+              <div className="flex items-center gap-4">
+                <label className="text-sm">زوم:</label>
+                <input
+                  type="range"
+                  min="1"
+                  max="5"
+                  step="0.1"
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  className="w-full accent-green-600"
+                />
+              </div>
+              <div className="flex items-center gap-4">
+                <label className="text-sm">چپ/راست:</label>
+                <input
+                  type="range"
+                  min="-100"
+                  max="100"
+                  step="1"
+                  value={crop.x}
+                  onChange={(e) =>
+                    setCrop({ ...crop, x: Number(e.target.value) })
+                  }
+                  className="w-full accent-blue-600"
+                />
+              </div>
+              <div className="flex items-center gap-4">
+                <label className="text-sm">بالا/پایین:</label>
+                <input
+                  type="range"
+                  min="-100"
+                  max="100"
+                  step="1"
+                  value={crop.y}
+                  onChange={(e) =>
+                    setCrop({ ...crop, y: Number(e.target.value) })
+                  }
+                  className="w-full accent-blue-600"
+                />
+              </div>
+              <div className="flex justify-between">
+                <button
+                  onClick={closeCropModal}
+                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  لغو
+                </button>
+                <button
+                  onClick={handleCropImage}
+                  className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                >
+                  برش
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {isReportCardCropModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-2 sm:p-4 md:p-6 rounded shadow-lg relative w-[98vw] h-[90vh] sm:w-[90vw] sm:h-[80vh] md:w-[70vw] md:h-[70vh] max-w-2xl max-h-[90vh]">
+            <div className="relative w-full h-[60vw] sm:h-[50vw] md:h-[60%] max-h-[60vh]">
+              <Cropper
+                image={currentReportCardForCrop}
+                crop={reportCardCrop}
+                zoom={reportCardCropZoom}
+                aspect={1}
+                onCropChange={setReportCardCrop}
+                onZoomChange={setReportCardCropZoom}
+                onCropComplete={setReportCardCroppedAreaPixels}
+                style={{ containerStyle: { width: "100%", height: "100%" } }}
+              />
+            </div>
+            <div className="relative z-10 flex flex-col gap-4 mt-4">
+              <div className="flex items-center gap-4">
+                <label className="text-sm">زوم:</label>
+                <input
+                  type="range"
+                  min="1"
+                  max="5"
+                  step="0.1"
+                  value={reportCardCropZoom}
+                  onChange={(e) =>
+                    setReportCardCropZoom(Number(e.target.value))
+                  }
+                  className="w-full accent-green-600"
+                />
+              </div>
+              <div className="flex items-center gap-4">
+                <label className="text-sm">چپ/راست:</label>
+                <input
+                  type="range"
+                  min="-100"
+                  max="100"
+                  step="1"
+                  value={reportCardCrop.x}
+                  onChange={(e) =>
+                    setReportCardCrop({
+                      ...reportCardCrop,
+                      x: Number(e.target.value),
+                    })
+                  }
+                  className="w-full accent-blue-600"
+                />
+              </div>
+              <div className="flex items-center gap-4">
+                <label className="text-sm">بالا/پایین:</label>
+                <input
+                  type="range"
+                  min="-100"
+                  max="100"
+                  step="1"
+                  value={reportCardCrop.y}
+                  onChange={(e) =>
+                    setReportCardCrop({
+                      ...reportCardCrop,
+                      y: Number(e.target.value),
+                    })
+                  }
+                  className="w-full accent-blue-600"
+                />
+              </div>
+              <div className="flex justify-between">
+                <button
+                  onClick={closeReportCardCropModal}
+                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  لغو
+                </button>
+                <button
+                  onClick={handleCropReportCardImage}
+                  className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                >
+                  برش
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
