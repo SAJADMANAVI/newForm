@@ -66,7 +66,13 @@ export const iransodoor = [
   { value: "یزد", label: "یزد" },
 ];
 
-export const grades = [{ value: "دهم", label: "دهم" }];
+// constants.js
+export const grades = [
+  { label: "انتخاب پایه", value: "" }, // این خط مهم است!
+  { label: "دهم", value: "10" },
+  { label: "یازدهم", value: "11" },
+  { label: "دوازدهم", value: "12" },
+];
 
 export const majors = [
   { value: "ریاضی", label: "ریاضی" },
