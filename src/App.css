@@ -101,3 +101,10 @@
   border-radius: 10px;
   box-shadow: 0px 0px 30px #000000;
 }
+
+/* در فایل CSS خود (مثلاً index.css یا styles.css) */
+.disable-manual-input {
+  pointer-events: none;
+  background-color: #e9e9e9; /* برای نشان دادن اینکه غیرفعال است */
+  cursor: default; /* تغییر نشانگر ماوس */
+}

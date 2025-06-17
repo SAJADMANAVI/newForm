@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import DatePicker from "react-multi-date-picker";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
@@ -214,33 +214,137 @@ function MainOfMyPage() {
     homeNumber: useRef(null),
   };
 
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [showContinueButton, setShowContinueButton] = useState(false);
+
+  const [showPaymentRulesModal, setShowPaymentRulesModal] = useState(false);
+  const [countdown, setCountdown] = useState(30);
+  const [checkboxEnabled, setCheckboxEnabled] = useState(false);
+  const [checked, setChecked] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentFields, setPaymentFields] = useState({
+    initial: "",
+    total: "12000000",
+    installment1: "",
+    date1: "",
+    date1Obj: null,
+    check1: "",
+    bank1: "",
+    installment2: "",
+    date2: "",
+    date2Obj: null,
+    check2: "",
+    bank2: "",
+    installment3: "",
+    date3: "",
+    date3Obj: null,
+    check3: "",
+    bank3: "",
+  });
+
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
   // تابع برای ارسال نهایی اطلاعات به بک‌اند
   const handleFinalSubmit = async () => {
-    setIsSubmitting(true); // دکمه ثبت را غیرفعال کن
-    setIsReviewMode(false); // از حالت مرور خارج شویم، چون در حال ارسال هستیم
+    if (grade && (grade.value === "10" || grade === "دهم")) {
+      setFormDisabled(true);
+      setShowPaymentRulesModal(true);
+      setCountdown(10);
+      setCheckboxEnabled(false);
+      setChecked(false);
+      return; // Don't submit yet, wait for modal
+    }
+    // اگر پایه یازدهم یا دوازدهم بود
+    if (
+      grade &&
+      (grade.value === "11" ||
+        grade.value === "12" ||
+        grade === "یازدهم" ||
+        grade === "دوازدهم")
+    ) {
+      // آماده‌سازی داده‌ها
+      const formData = new FormData();
+      formData.append("st_fname", firstName);
+      formData.append("st_lname", lastName);
+      formData.append("st_faname", fatherName);
+      formData.append("st_id_no", nationalCode);
+      formData.append("st_birthdate", birthDate);
+      formData.append("st_birthplace", birthPlace?.value || "");
+      formData.append("st_id_card_exportion", iranSodoor?.value || "");
+      formData.append("st_grade", grade.value);
+      formData.append("st_field", major?.value || "");
+      formData.append(
+        "st_series",
+        `${serialAlpha.value}${serialNumber}${serialNumber2}`
+      );
+      formData.append("st_phone", contactNumber);
+      formData.append("st_home_phone", homeNumber);
+      formData.append("st_address", address);
+      formData.append("fa_fname", parentFirstName);
+      formData.append("fa_lname", parentLastName);
+      formData.append("fa_job", parentJob);
+      formData.append("fa_phone", parentContact);
+      formData.append("fa_id_no", parentNationalCode);
+      formData.append("fa_education", parentEducation);
+      formData.append("fa_work_address", parentWorkAddress);
+      formData.append("mo_fname", motherFirstName);
+      formData.append("mo_lname", motherLastName);
+      formData.append("mo_job", motherJob);
+      formData.append("mo_phone", motherContact);
+      formData.append("mo_id_no", motherNationalCode);
+      formData.append("mo_education", motherEducation);
+      formData.append("mo_work_address", motherWorkAddress);
+      formData.append("last_school", prevSchool);
+      formData.append("last_avrage", prevAvg);
+      formData.append("last_enzebat", prevDiscipline);
+      if (croppedImage) {
+        formData.append("st_personal_pic", croppedImage, "student_image.png");
+      }
+      if (reportCardFile) {
+        formData.append("last_karname", reportCardFile, "report_card.png");
+      }
+      setIsSubmitting(true);
+      try {
+        await axios.post(
+          "https://mandegarhs.ir/amoozyar2/api/students/register",
+          formData,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+        setShowSuccessModal(true);
+      } catch (error) {
+        alert("خطا در ثبت اطلاعات! لطفا دوباره تلاش کنید.");
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+    setIsSubmitting(true);
+    setIsReviewMode(false);
 
     const formData = new FormData();
     formData.append("firstName", firstName);
     formData.append("lastName", lastName);
-    formData.append("nationalId", nationalId);
+    formData.append("nationalId", nationalCode);
     formData.append(
       "birthDate",
       birthDate ? birthDate.format("YYYY/MM/DD") : ""
     );
-    formData.append("phoneNumber", phoneNumber);
+    formData.append("phoneNumber", contactNumber);
     formData.append("fatherName", fatherName);
-    formData.append("fatherNationalId", fatherNationalId);
-    formData.append("fatherPhoneNumber", fatherPhoneNumber);
-    formData.append("motherNationalId", motherNationalId);
-    formData.append("motherPhoneNumber", motherPhoneNumber);
-    formData.append("issuePlace", issuePlace);
+    formData.append("fatherNationalId", parentNationalCode);
+    formData.append("fatherPhoneNumber", parentContact);
+    formData.append("motherNationalId", motherNationalCode);
+    formData.append("motherPhoneNumber", motherContact);
+    formData.append("issuePlace", address);
     formData.append("address", address);
     formData.append("grade", grade);
     formData.append("major", major);
-    formData.append("alefOption", alefOption);
+    formData.append("alefOption", serialAlpha);
     formData.append("prevSchool", prevSchool);
     formData.append("prevAvg", prevAvg);
-    formData.append("prevDiscipline", prevDiscipline);
+    formData.append("last_enzebat", prevDiscipline);
 
     if (reportCardFile) {
       formData.append("reportCard", reportCardFile);
@@ -259,6 +363,30 @@ function MainOfMyPage() {
       setIsSubmitting(false); // دکمه ثبت را دوباره فعال کن
     }
   };
+
+  useEffect(() => {
+    let timer;
+    if (showPaymentRulesModal && countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    } else if (showPaymentRulesModal && countdown === 0) {
+      setCheckboxEnabled(true);
+    }
+    return () => clearTimeout(timer);
+  }, [showPaymentRulesModal, countdown]);
+
+  useEffect(() => {
+    let closeTimer;
+    if (checked && showPaymentRulesModal) {
+      closeTimer = setTimeout(() => {
+        setShowPaymentRulesModal(false);
+        setShowPaymentForm(true);
+        setIsSubmitting(true);
+        setIsReviewMode(false);
+        // ... rest of your submit logic ...
+      }, 2000);
+    }
+    return () => clearTimeout(closeTimer);
+  }, [checked, showPaymentRulesModal]);
 
   const handleAddressChange = (e) => {
     setAddress(e.target.value);
@@ -462,6 +590,11 @@ function MainOfMyPage() {
       if (maxLength) value = value.slice(0, maxLength);
       setter(value);
     };
+
+  const handleFinalSubmitAfterConfirm = async () => {
+    setShowConfirmationModal(false);
+    setShowContinueButton(true);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -685,77 +818,8 @@ function MainOfMyPage() {
       return; // از ارسال فرم جلوگیری کنید
     }
 
-    // اگر همه اعتبارسنجی‌ها پاس شد، فرم را ارسال کنید
-    // ... (بقیه منطق ارسال فرم شما)
-    setIsSubmitting(true);
-    try {
-      const formData = new FormData();
-      // ... (اضافه کردن تمام فیلدها به formData)
-      formData.append("firstName", firstName);
-      formData.append("lastName", lastName);
-      formData.append("fatherName", fatherName);
-      formData.append("nationalCode", nationalCode);
-      formData.append("birthDate", birthDate.format("YYYY-MM-DD"));
-      formData.append("birthPlace", birthPlace.value);
-      formData.append("grade", grade.value);
-      formData.append("major", major.value);
-      formData.append("serialAlpha", serialAlpha.value);
-      formData.append("serialNumber", serialNumber);
-      formData.append("serialNumber2", serialNumber2);
-      formData.append("contactNumber", contactNumber);
-      formData.append("homeNumber", homeNumber);
-      formData.append("address", address);
-
-      formData.append("parentFirstName", parentFirstName);
-      formData.append("parentLastName", parentLastName);
-      formData.append("parentJob", parentJob);
-      formData.append("parentContact", parentContact);
-      formData.append("parentNationalCode", parentNationalCode);
-      formData.append("parentEducation", parentEducation);
-      formData.append("parentWorkAddress", parentWorkWorkAddress); // مطمئن شوید نام متغیر درست است
-
-      formData.append("motherFirstName", motherFirstName);
-      formData.append("motherLastName", motherLastName);
-      formData.append("motherJob", motherJob);
-      formData.append("motherContact", motherContact);
-      formData.append("motherNationalCode", motherNationalCode);
-      formData.append("motherEducation", motherEducation);
-      formData.append("motherWorkAddress", motherWorkAddress);
-
-      formData.append("prevSchool", prevSchool);
-      formData.append("prevAvg", prevAvg);
-      formData.append("prevDiscipline", prevDiscipline);
-
-      if (croppedImage) {
-        const response = await fetch(croppedImage);
-        const blob = await response.blob();
-        formData.append("studentImage", blob, "student_image.png");
-      }
-
-      if (reportCardFile) {
-        const response = await fetch(reportCardFile);
-        const blob = await response.blob();
-        formData.append("reportCardImage", blob, "report_card.png");
-      }
-
-      const response = await axios.post(
-        "http://localhost:5000/api/students",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-      console.log("Success:", response.data);
-      alert("اطلاعات با موفقیت ثبت شد!");
-      // resetForm();
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      alert("خطا در ثبت اطلاعات!");
-    } finally {
-      setIsSubmitting(false);
-    }
+    // اگر همه اعتبارسنجی‌ها پاس شد، به جای ارسال مستقیم، مدال را نمایش بده
+    setShowConfirmationModal(true);
   };
 
   const handleEdit = () => {
@@ -1140,21 +1204,21 @@ function MainOfMyPage() {
                     shouldHighlightWeekends
                     inputPlaceholder="انتخاب تاریخ"
                     colorPrimary="#198754"
-                    inputClassName={`w-full h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-                      errors.birthDate
-                        ? "border-red-500 ring-red-400"
-                        : "focus:ring-blue-400"
-                    } ${inputDisabledClass}`}
                     disabled={formDisabled}
                     maxDate={new Date()}
-                    renderInput={(props) => (
+                    renderInput={({
+                      openCalendar,
+                      value,
+                      handleValueChange,
+                    }) => (
                       <input
-                        {...props}
-                        ref={refs.birthDate}
-                        readOnly
-                        value={birthDate}
+                        value={birthDate} // همچنان مقدار فرمت شده را نمایش دهد
+                        readOnly // این ویژگی مهم است
                         placeholder="انتخاب تاریخ"
-                        className={`w-full h-20 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                        onClick={openCalendar} // با کلیک روی input، تقویم باز شود
+                        onFocus={openCalendar} // با فوکوس روی input، تقویم باز شود
+                        onChange={handleValueChange} // برای اطمینان از عملکرد onChange داخلی DatePicker
+                        className={`w-full h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 bg-gray-50 cursor-pointer ${
                           errors.birthDate
                             ? "border-red-500 ring-red-400"
                             : "focus:ring-blue-400"
@@ -1984,21 +2048,33 @@ function MainOfMyPage() {
 
                 {/* Form Submission Buttons */}
                 <div className="col-span-full flex justify-end mt-8">
-                  <button
-                    type="button"
-                    onClick={fillDummyData}
-                    className={`px-6 py-3 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition mr-4 ${inputDisabledClass}`}
-                    disabled={formDisabled}
-                  >
-                    پر کردن با اطلاعات تستی
-                  </button>
-                  <button
-                    type="submit"
-                    className={`px-6 py-3 bg-green-500 text-white rounded-md hover:bg-green-600 transition ${inputDisabledClass}`}
-                    disabled={formDisabled}
-                  >
-                    ثبت نام موقت{" "}
-                  </button>
+                  {!showContinueButton ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={fillDummyData}
+                        className={`px-6 py-3 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition mr-4 ${inputDisabledClass}`}
+                        disabled={formDisabled}
+                      >
+                        پر کردن با اطلاعات تستی
+                      </button>
+                      <button
+                        type="submit"
+                        className={`px-6 py-3 bg-green-500 text-white rounded-md hover:bg-green-600 transition ${inputDisabledClass}`}
+                        disabled={formDisabled}
+                      >
+                        ثبت نام موقت
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleFinalSubmit}
+                      className="m-auto px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
+                    >
+                      ادامه ثبت نام موقت
+                    </button>
+                  )}
                 </div>
               </div>
             </form>
@@ -2108,6 +2184,362 @@ function MainOfMyPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showConfirmationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-11/12 max-w-md">
+            <h2 className="text-xl font-bold mb-4 text-center">
+              لطفا اطلاعات خود را بررسی کنید
+            </h2>
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={handleFinalSubmitAfterConfirm}
+                className="px-6 py-3 bg-green-500 text-white rounded-md hover:bg-green-600 transition"
+              >
+                تایید
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPaymentRulesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80">
+          <div className="bg-white rounded-lg shadow-xl p-8 max-w-2xl w-full relative">
+            <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
+              قوانین پرداخت ثبت نام
+            </h2>
+            <div className="text-right text-[18px] leading-8 max-h-[60vh] overflow-y-auto px-2">
+              <p>دانش آموز گرامی</p>
+              <ol className="list-decimal pr-4">
+                <li>
+                  جهت ثبت نام و درج نام در لیست کلاسی، می بایست ابتدا{" "}
+                  <span className="text-green-700 font-bold">
+                    حداقل یک دوم مبلغ مصوب کلاس های تابستانی
+                  </span>{" "}
+                  را پرداخت نموده و مابقی را می توانید به صورت اقساط چک و یا
+                  نقدی پرداخت نمایید.
+                </li>
+                <li>
+                  شما می توانید مابقی هزینه کلاس ها را حداکثر دو قسط دیگر، با
+                  مراجعه به ربات بله، به حساب دبیرستان واریز نمایید.
+                </li>
+                <li>
+                  ثبت نام قطعی و درج نام شما در لیست کلاسی منوط به پرداخت هزینه
+                  می باشد، لذا پس از ثبت نام در اولین فرصت اقدام به پرداخت هزینه
+                  از طریق درگاه پرداخت اقدام نمایید.
+                </li>
+                <li className="text-red-600 font-bold">
+                  درصورت تمایل به پرداخت یکباره کل مبلغ، مبلغ کل را در پرداخت
+                  اولیه وارد نمایید
+                </li>
+              </ol>
+              <p className="mt-4">
+                خواهشمند است نهایت دقت لازم را جهت تکمیل موارد ذیل، مبذول
+                فرمایید. اطلاعات وارد شده قابل تغییر نخواهد بود.
+              </p>
+              <p className="mt-2">
+                پرداخت اولیه انجام شده است.{" "}
+                <span className="text-red-600 font-bold">
+                  در صورت عدم پرداخت مبلغ پیش ثبت نام، ثبت نام شما انجام نخواهد
+                  شد
+                </span>
+              </p>
+              <p className="mt-2">
+                توجه: شایان ذکر است در صورتی ثبت نام نهایی می شود که پرداخت مبلغ
+                پیش ثبت نام انجام شده باشد.
+              </p>
+              <p className="mt-2 text-blue-700">
+                جهت پرداخت اقساط خود می بایست از طریق ربات پیام رسان بله نسبت به
+                استعلام صورت وضعیت مالی و پرداخت آن اقدام نمایید -{" "}
+                <span className="font-bold">mandegar_imamsadeq_bot@</span>
+              </p>
+            </div>
+            <div className="flex flex-col items-center mt-8">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  disabled={!checkboxEnabled}
+                  checked={checked}
+                  onChange={(e) => setChecked(e.target.checked)}
+                  className="w-5 h-5 accent-green-600"
+                />
+                <label
+                  className={
+                    checkboxEnabled
+                      ? "text-green-700 font-bold"
+                      : "text-gray-400"
+                  }
+                >
+                  قوانین پرداخت را مطالعه کردم و می‌پذیرم
+                </label>
+              </div>
+              <div className="mt-4 text-center text-lg">
+                <span className="font-bold">{countdown}</span> ثانیه تا فعال شدن
+                تیک
+              </div>
+              <div className="mt-2 text-sm text-gray-500">
+                بعد از گذشت 30 ثانیه می‌توانید تیک را بزنید
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showPaymentForm && (
+        <div className="w-full flex flex-col items-center mt-12">
+          <div className="bg-gray-50 rounded-lg p-6 w-full max-w-4xl shadow border">
+            <div className="flex justify-between items-center mb-6">
+              <span className="text-lg font-bold">
+                جمع کل : ۱۲٬۰۰۰٬۰۰۰ ریال
+              </span>
+              <div className="flex items-center gap-2">
+                <label className="font-bold">پرداخت اولیه :</label>
+                <input
+                  className="border rounded px-3 py-1 w-40 text-center"
+                  value={paymentFields.initial}
+                  onChange={(e) =>
+                    setPaymentFields((f) => ({ ...f, initial: e.target.value }))
+                  }
+                  placeholder="۶۰۰۰۰۰۰"
+                />
+              </div>
+            </div>
+            {/* قسط اول */}
+            <div className="grid grid-cols-4 gap-4 mb-4">
+              <div className="col-span-1">
+                <label>مبلغ قسط اول :</label>
+                <input
+                  className="border rounded px-3 py-1 w-full text-center"
+                  value={paymentFields.installment1}
+                  onChange={(e) =>
+                    setPaymentFields((f) => ({
+                      ...f,
+                      installment1: e.target.value,
+                    }))
+                  }
+                  placeholder=""
+                />
+              </div>
+              <div className="col-span-1">
+                <label>تاریخ قسط اول :</label>
+                <DatePicker
+                  value={paymentFields.date1Obj}
+                  onChange={(date) =>
+                    setPaymentFields((f) => ({
+                      ...f,
+                      date1Obj: date,
+                      date1: date
+                        ? `${date.year}/${date.month
+                            .toString()
+                            .padStart(2, "0")}/${date.day
+                            .toString()
+                            .padStart(2, "0")}`
+                        : "",
+                    }))
+                  }
+                  calendar={persian}
+                  locale={persian_fa}
+                  shouldHighlightWeekends
+                  inputPlaceholder="انتخاب تاریخ"
+                  colorPrimary="#198754"
+                  inputClassName="w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
+                  renderInput={(props) => (
+                    <input
+                      {...props}
+                      readOnly
+                      className="w-full px-3 py-1 border rounded-md bg-gray-50 cursor-pointer text-center"
+                    />
+                  )}
+                />
+              </div>
+              <div className="col-span-1">
+                <label>شماره چک :</label>
+                <input
+                  className="border rounded px-3 py-1 w-full text-center"
+                  value={paymentFields.check1}
+                  onChange={(e) =>
+                    setPaymentFields((f) => ({ ...f, check1: e.target.value }))
+                  }
+                  placeholder=""
+                />
+              </div>
+              <div className="col-span-1">
+                <label>نام بانک :</label>
+                <input
+                  className="border rounded px-3 py-1 w-full text-center"
+                  value={paymentFields.bank1}
+                  onChange={(e) =>
+                    setPaymentFields((f) => ({ ...f, bank1: e.target.value }))
+                  }
+                  placeholder=""
+                />
+              </div>
+            </div>
+            {/* قسط دوم */}
+            <div className="grid grid-cols-4 gap-4 mb-4">
+              <div className="col-span-1">
+                <label>مبلغ قسط دوم :</label>
+                <input
+                  className="border rounded px-3 py-1 w-full text-center"
+                  value={paymentFields.installment2}
+                  onChange={(e) =>
+                    setPaymentFields((f) => ({
+                      ...f,
+                      installment2: e.target.value,
+                    }))
+                  }
+                  placeholder=""
+                />
+              </div>
+              <div className="col-span-1">
+                <label>تاریخ قسط دوم :</label>
+                <DatePicker
+                  value={paymentFields.date2Obj}
+                  onChange={(date) =>
+                    setPaymentFields((f) => ({
+                      ...f,
+                      date2Obj: date,
+                      date2: date
+                        ? `${date.year}/${date.month
+                            .toString()
+                            .padStart(2, "0")}/${date.day
+                            .toString()
+                            .padStart(2, "0")}`
+                        : "",
+                    }))
+                  }
+                  calendar={persian}
+                  locale={persian_fa}
+                  shouldHighlightWeekends
+                  inputPlaceholder="انتخاب تاریخ"
+                  colorPrimary="#198754"
+                  inputClassName="w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
+                  renderInput={(props) => (
+                    <input
+                      {...props}
+                      readOnly
+                      className="w-full px-3 py-1 border rounded-md bg-gray-50 cursor-pointer text-center"
+                    />
+                  )}
+                />
+              </div>
+              <div className="col-span-1">
+                <label>شماره چک :</label>
+                <input
+                  className="border rounded px-3 py-1 w-full text-center"
+                  value={paymentFields.check2}
+                  onChange={(e) =>
+                    setPaymentFields((f) => ({ ...f, check2: e.target.value }))
+                  }
+                  placeholder=""
+                />
+              </div>
+              <div className="col-span-1">
+                <label>نام بانک :</label>
+                <input
+                  className="border rounded px-3 py-1 w-full text-center"
+                  value={paymentFields.bank2}
+                  onChange={(e) =>
+                    setPaymentFields((f) => ({ ...f, bank2: e.target.value }))
+                  }
+                  placeholder=""
+                />
+              </div>
+            </div>
+            {/* قسط سوم */}
+            <div className="grid grid-cols-4 gap-4 mb-4">
+              <div className="col-span-1">
+                <label>مبلغ قسط سوم :</label>
+                <input
+                  className="border rounded px-3 py-1 w-full text-center"
+                  value={paymentFields.installment3}
+                  onChange={(e) =>
+                    setPaymentFields((f) => ({
+                      ...f,
+                      installment3: e.target.value,
+                    }))
+                  }
+                  placeholder=""
+                />
+              </div>
+              <div className="col-span-1">
+                <label>تاریخ قسط سوم :</label>
+                <DatePicker
+                  value={paymentFields.date3Obj}
+                  onChange={(date) =>
+                    setPaymentFields((f) => ({
+                      ...f,
+                      date3Obj: date,
+                      date3: date
+                        ? `${date.year}/${date.month
+                            .toString()
+                            .padStart(2, "0")}/${date.day
+                            .toString()
+                            .padStart(2, "0")}`
+                        : "",
+                    }))
+                  }
+                  calendar={persian}
+                  locale={persian_fa}
+                  shouldHighlightWeekends
+                  inputPlaceholder="انتخاب تاریخ"
+                  colorPrimary="#198754"
+                  inputClassName="w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
+                  renderInput={(props) => (
+                    <input
+                      {...props}
+                      readOnly
+                      className="w-full px-3 py-1 border rounded-md bg-gray-50 cursor-pointer text-center"
+                    />
+                  )}
+                />
+              </div>
+              <div className="col-span-1">
+                <label>شماره چک :</label>
+                <input
+                  className="border rounded px-3 py-1 w-full text-center"
+                  value={paymentFields.check3}
+                  onChange={(e) =>
+                    setPaymentFields((f) => ({ ...f, check3: e.target.value }))
+                  }
+                  placeholder=""
+                />
+              </div>
+              <div className="col-span-1">
+                <label>نام بانک :</label>
+                <input
+                  className="border rounded px-3 py-1 w-full text-center"
+                  value={paymentFields.bank3}
+                  onChange={(e) =>
+                    setPaymentFields((f) => ({ ...f, bank3: e.target.value }))
+                  }
+                  placeholder=""
+                />
+              </div>
+            </div>
+            <div className="flex justify-center mt-6">
+              <button className="px-8 py-2 bg-green-700 text-white rounded hover:bg-green-800 font-bold">
+                ثبت نام و پرداخت
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
+            <h2 className="text-xl font-bold mb-6 text-green-700">
+              اطلاعات با موفقیت ثبت شد لطفا منتظر پیامک باشید.
+            </h2>
+            <button
+              className="mt-4 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+              onClick={() => setShowSuccessModal(false)}
+            >
+              بستن
+            </button>
           </div>
         </div>
       )}
