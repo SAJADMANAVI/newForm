@@ -223,8 +223,8 @@ function MainOfMyPage() {
   const [checked, setChecked] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentFields, setPaymentFields] = useState({
-    initial: "",
-    total: "12000000",
+    initial: "50000000",
+    total: "100000000",
     installment1: "",
     date1: "",
     date1Obj: null,
@@ -242,14 +242,73 @@ function MainOfMyPage() {
     bank3: "",
   });
 
+  const [paymentErrors, setPaymentErrors] = useState({
+    initial: "",
+    installments: "",
+    date1: "",
+    date2: "",
+    date3: "",
+  });
+
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  const validatePaymentFields = () => {
+    const initial = parseInt(paymentFields.initial) || 0;
+    const installment1 = parseInt(paymentFields.installment1) || 0;
+    const installment2 = parseInt(paymentFields.installment2) || 0;
+    const installment3 = parseInt(paymentFields.installment3) || 0;
+    const total = parseInt(paymentFields.total);
+    const totalInstallments = installment1 + installment2 + installment3;
+
+    let isValid = true;
+    const errors = {};
+
+    // بررسی پرداخت اولیه
+    if (initial < 50000000 || initial > 100000000) {
+      errors.initial = "مبلغ پرداخت اولیه باید بین ۵۰ تا ۱۰۰ میلیون ریال باشد";
+      isValid = false;
+    }
+
+    // بررسی مجموع اقساط
+    if (totalInstallments !== total - initial) {
+      errors.installments = "مجموع اقساط باید با مبلغ باقیمانده برابر باشد";
+      isValid = false;
+    }
+
+    // بررسی تاریخ‌های اقساط
+    if (installment1 > 0 && !paymentFields.date1) {
+      errors.date1 = "برای قسط اول باید تاریخ انتخاب شود";
+      isValid = false;
+    }
+    if (installment2 > 0 && !paymentFields.date2) {
+      errors.date2 = "برای قسط دوم باید تاریخ انتخاب شود";
+      isValid = false;
+    }
+    if (installment3 > 0 && !paymentFields.date3) {
+      errors.date3 = "برای قسط سوم باید تاریخ انتخاب شود";
+      isValid = false;
+    }
+
+    setPaymentErrors(errors);
+    return isValid;
+  };
+
+  const handleInitialPaymentChange = (e) => {
+    const value = e.target.value.replace(/[^0-9]/g, "");
+    setPaymentFields((f) => ({ ...f, initial: value }));
+  };
+
+  const handleInstallmentChange = (e, field) => {
+    const value = e.target.value.replace(/[^0-9]/g, "");
+    setPaymentFields((f) => ({ ...f, [field]: value }));
+  };
 
   // تابع برای ارسال نهایی اطلاعات به بک‌اند
   const handleFinalSubmit = async () => {
     if (grade && (grade.value === "10" || grade === "دهم")) {
       setFormDisabled(true);
       setShowPaymentRulesModal(true);
-      setCountdown(10);
+      setCountdown(1);
       setCheckboxEnabled(false);
       setChecked(false);
       return; // Don't submit yet, wait for modal
@@ -879,6 +938,10 @@ function MainOfMyPage() {
     }
   };
 
+  // تنظیم محدوده تاریخ‌ها
+  const minDate = new Date(2025, 3, 6); // 15 تیر 1404
+  const maxDate = new Date(2026, 2, 21); // 31 خرداد 1405
+
   return (
     <main className="max-w-screen-lg mx-auto p-6 relative">
       <div className="flex justify-center my-16">
@@ -1204,26 +1267,40 @@ function MainOfMyPage() {
                     shouldHighlightWeekends
                     inputPlaceholder="انتخاب تاریخ"
                     colorPrimary="#198754"
+                    inputClassName={`w-full h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                      errors.birthDate
+                        ? "border-red-500 ring-red-400"
+                        : "focus:ring-blue-400"
+                    } ${inputDisabledClass}`}
                     disabled={formDisabled}
                     maxDate={new Date()}
-                    renderInput={({
-                      openCalendar,
-                      value,
-                      handleValueChange,
-                    }) => (
+                    renderInput={(props) => (
                       <input
-                        value={birthDate} // همچنان مقدار فرمت شده را نمایش دهد
-                        readOnly // این ویژگی مهم است
+                        {...props}
+                        readOnly
+                        value={birthDate}
                         placeholder="انتخاب تاریخ"
-                        onClick={openCalendar} // با کلیک روی input، تقویم باز شود
-                        onFocus={openCalendar} // با فوکوس روی input، تقویم باز شود
-                        onChange={handleValueChange} // برای اطمینان از عملکرد onChange داخلی DatePicker
-                        className={`w-full h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 bg-gray-50 cursor-pointer ${
+                        className={`w-full h-20 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 bg-gray-50 cursor-pointer ${
                           errors.birthDate
                             ? "border-red-500 ring-red-400"
                             : "focus:ring-blue-400"
                         } ${inputDisabledClass}`}
                         style={{ height: "40px" }}
+                        onKeyDown={(e) => e.preventDefault()}
+                        onPaste={(e) => e.preventDefault()}
+                        onInput={(e) => e.preventDefault()}
+                        onKeyPress={(e) => e.preventDefault()}
+                        onKeyUp={(e) => e.preventDefault()}
+                        onCompositionStart={(e) => e.preventDefault()}
+                        onCompositionEnd={(e) => e.preventDefault()}
+                        onCompositionUpdate={(e) => e.preventDefault()}
+                        onBeforeInput={(e) => e.preventDefault()}
+                        onSelect={(e) => e.preventDefault()}
+                        onCut={(e) => e.preventDefault()}
+                        onCopy={(e) => e.preventDefault()}
+                        onDrag={(e) => e.preventDefault()}
+                        onDragStart={(e) => e.preventDefault()}
+                        onDrop={(e) => e.preventDefault()}
                       />
                     )}
                   />
@@ -2289,239 +2366,311 @@ function MainOfMyPage() {
         </div>
       )}
       {showPaymentForm && (
-        <div className="w-full flex flex-col items-center mt-12">
-          <div className="bg-gray-50 rounded-lg p-6 w-full max-w-4xl shadow border">
-            <div className="flex justify-between items-center mb-6">
-              <span className="text-lg font-bold">
-                جمع کل : ۱۲٬۰۰۰٬۰۰۰ ریال
-              </span>
-              <div className="flex items-center gap-2">
-                <label className="font-bold">پرداخت اولیه :</label>
-                <input
-                  className="border rounded px-3 py-1 w-40 text-center"
-                  value={paymentFields.initial}
-                  onChange={(e) =>
-                    setPaymentFields((f) => ({ ...f, initial: e.target.value }))
-                  }
-                  placeholder="۶۰۰۰۰۰۰"
-                />
-              </div>
-            </div>
-            {/* قسط اول */}
-            <div className="grid grid-cols-4 gap-4 mb-4">
-              <div className="col-span-1">
-                <label>مبلغ قسط اول :</label>
-                <input
-                  className="border rounded px-3 py-1 w-full text-center"
-                  value={paymentFields.installment1}
-                  onChange={(e) =>
-                    setPaymentFields((f) => ({
-                      ...f,
-                      installment1: e.target.value,
-                    }))
-                  }
-                  placeholder=""
-                />
-              </div>
-              <div className="col-span-1">
-                <label>تاریخ قسط اول :</label>
-                <DatePicker
-                  value={paymentFields.date1Obj}
-                  onChange={(date) =>
-                    setPaymentFields((f) => ({
-                      ...f,
-                      date1Obj: date,
-                      date1: date
-                        ? `${date.year}/${date.month
-                            .toString()
-                            .padStart(2, "0")}/${date.day
-                            .toString()
-                            .padStart(2, "0")}`
-                        : "",
-                    }))
-                  }
-                  calendar={persian}
-                  locale={persian_fa}
-                  shouldHighlightWeekends
-                  inputPlaceholder="انتخاب تاریخ"
-                  colorPrimary="#198754"
-                  inputClassName="w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
-                  renderInput={(props) => (
+        <div className="w-full">
+          <div className="w-full flex flex-col items-center mt-12">
+            <div className="bg-gray-50 rounded-lg p-4 sm:p-6 w-full max-w-4xl shadow border">
+              <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
+                <span className="text-base sm:text-lg font-bold mb-2 sm:mb-0">
+                  جمع کل : ۱۰۰٬۰۰۰٬۰۰۰ ریال
+                </span>
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                  <label className="font-bold">پرداخت اولیه :</label>
+                  <div className="flex flex-col">
                     <input
-                      {...props}
-                      readOnly
-                      className="w-full px-3 py-1 border rounded-md bg-gray-50 cursor-pointer text-center"
+                      className={`border rounded px-3 py-1 w-32 sm:w-40 text-center ${
+                        paymentErrors.initial ? "border-red-500" : ""
+                      }`}
+                      value={paymentFields.initial}
+                      onChange={handleInitialPaymentChange}
+                      placeholder="۵۰۰۰۰۰۰۰"
                     />
-                  )}
-                />
+                    {paymentErrors.initial && (
+                      <span className="text-red-500 text-sm mt-1">
+                        {paymentErrors.initial}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="col-span-1">
-                <label>شماره چک :</label>
-                <input
-                  className="border rounded px-3 py-1 w-full text-center"
-                  value={paymentFields.check1}
-                  onChange={(e) =>
-                    setPaymentFields((f) => ({ ...f, check1: e.target.value }))
-                  }
-                  placeholder=""
-                />
+              {/* قسط اول */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div className="col-span-1">
+                  <label>مبلغ قسط اول :</label>
+                  <input
+                    className="border rounded px-3 py-1 w-full text-center"
+                    value={paymentFields.installment1}
+                    onChange={(e) => handleInstallmentChange(e, "installment1")}
+                    placeholder=""
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label>تاریخ قسط اول :</label>
+                  <DatePicker
+                    value={paymentFields.date1Obj}
+                    onChange={(date) =>
+                      setPaymentFields((f) => ({
+                        ...f,
+                        date1Obj: date,
+                        date1: date
+                          ? `${date.year}/${date.month
+                              .toString()
+                              .padStart(2, "0")}/${date.day
+                              .toString()
+                              .padStart(2, "0")}`
+                          : "",
+                      }))
+                    }
+                    calendar={persian}
+                    locale={persian_fa}
+                    shouldHighlightWeekends
+                    inputPlaceholder="انتخاب تاریخ"
+                    colorPrimary="#198754"
+                    minDate={minDate}
+                    maxDate={maxDate}
+                    inputClassName={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 ${
+                      paymentErrors.date1 ? "border-red-500" : ""
+                    }`}
+                    renderInput={(props) => (
+                      <div className="flex flex-col">
+                        <input
+                          {...props}
+                          readOnly
+                          className="w-full px-3 py-1 border rounded-md bg-gray-50 cursor-pointer text-center"
+                          onKeyDown={(e) => e.preventDefault()}
+                          onPaste={(e) => e.preventDefault()}
+                          onInput={(e) => e.preventDefault()}
+                          onKeyPress={(e) => e.preventDefault()}
+                          onKeyUp={(e) => e.preventDefault()}
+                          onCompositionStart={(e) => e.preventDefault()}
+                          onCompositionEnd={(e) => e.preventDefault()}
+                          onCompositionUpdate={(e) => e.preventDefault()}
+                          onBeforeInput={(e) => e.preventDefault()}
+                          onSelect={(e) => e.preventDefault()}
+                          onCut={(e) => e.preventDefault()}
+                          onCopy={(e) => e.preventDefault()}
+                          onDrag={(e) => e.preventDefault()}
+                          onDragStart={(e) => e.preventDefault()}
+                          onDrop={(e) => e.preventDefault()}
+                        />
+                        {paymentErrors.date1 && (
+                          <span className="text-red-500 text-sm mt-1">
+                            {paymentErrors.date1}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label>شماره چک :</label>
+                  <input
+                    className="border rounded px-3 py-1 w-full text-center"
+                    value={paymentFields.check1}
+                    onChange={(e) => handleInstallmentChange(e, "check1")}
+                    placeholder=""
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label>نام بانک :</label>
+                  <input
+                    className="border rounded px-3 py-1 w-full text-center"
+                    value={paymentFields.bank1}
+                    onChange={(e) => handleInstallmentChange(e, "bank1")}
+                    placeholder=""
+                  />
+                </div>
               </div>
-              <div className="col-span-1">
-                <label>نام بانک :</label>
-                <input
-                  className="border rounded px-3 py-1 w-full text-center"
-                  value={paymentFields.bank1}
-                  onChange={(e) =>
-                    setPaymentFields((f) => ({ ...f, bank1: e.target.value }))
-                  }
-                  placeholder=""
-                />
+              {/* قسط دوم */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div className="col-span-1">
+                  <label>مبلغ قسط دوم :</label>
+                  <input
+                    className="border rounded px-3 py-1 w-full text-center"
+                    value={paymentFields.installment2}
+                    onChange={(e) => handleInstallmentChange(e, "installment2")}
+                    placeholder=""
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label>تاریخ قسط دوم :</label>
+                  <DatePicker
+                    value={paymentFields.date2Obj}
+                    onChange={(date) =>
+                      setPaymentFields((f) => ({
+                        ...f,
+                        date2Obj: date,
+                        date2: date
+                          ? `${date.year}/${date.month
+                              .toString()
+                              .padStart(2, "0")}/${date.day
+                              .toString()
+                              .padStart(2, "0")}`
+                          : "",
+                      }))
+                    }
+                    calendar={persian}
+                    locale={persian_fa}
+                    shouldHighlightWeekends
+                    inputPlaceholder="انتخاب تاریخ"
+                    colorPrimary="#198754"
+                    minDate={minDate}
+                    maxDate={maxDate}
+                    inputClassName={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 ${
+                      paymentErrors.date2 ? "border-red-500" : ""
+                    }`}
+                    renderInput={(props) => (
+                      <div className="flex flex-col">
+                        <input
+                          {...props}
+                          readOnly
+                          className="w-full px-3 py-1 border rounded-md bg-gray-50 cursor-pointer text-center"
+                          onKeyDown={(e) => e.preventDefault()}
+                          onPaste={(e) => e.preventDefault()}
+                          onInput={(e) => e.preventDefault()}
+                          onKeyPress={(e) => e.preventDefault()}
+                          onKeyUp={(e) => e.preventDefault()}
+                          onCompositionStart={(e) => e.preventDefault()}
+                          onCompositionEnd={(e) => e.preventDefault()}
+                          onCompositionUpdate={(e) => e.preventDefault()}
+                          onBeforeInput={(e) => e.preventDefault()}
+                          onSelect={(e) => e.preventDefault()}
+                          onCut={(e) => e.preventDefault()}
+                          onCopy={(e) => e.preventDefault()}
+                          onDrag={(e) => e.preventDefault()}
+                          onDragStart={(e) => e.preventDefault()}
+                          onDrop={(e) => e.preventDefault()}
+                        />
+                        {paymentErrors.date2 && (
+                          <span className="text-red-500 text-sm mt-1">
+                            {paymentErrors.date2}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label>شماره چک :</label>
+                  <input
+                    className="border rounded px-3 py-1 w-full text-center"
+                    value={paymentFields.check2}
+                    onChange={(e) => handleInstallmentChange(e, "check2")}
+                    placeholder=""
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label>نام بانک :</label>
+                  <input
+                    className="border rounded px-3 py-1 w-full text-center"
+                    value={paymentFields.bank2}
+                    onChange={(e) => handleInstallmentChange(e, "bank2")}
+                    placeholder=""
+                  />
+                </div>
               </div>
-            </div>
-            {/* قسط دوم */}
-            <div className="grid grid-cols-4 gap-4 mb-4">
-              <div className="col-span-1">
-                <label>مبلغ قسط دوم :</label>
-                <input
-                  className="border rounded px-3 py-1 w-full text-center"
-                  value={paymentFields.installment2}
-                  onChange={(e) =>
-                    setPaymentFields((f) => ({
-                      ...f,
-                      installment2: e.target.value,
-                    }))
-                  }
-                  placeholder=""
-                />
+              {/* قسط سوم */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div className="col-span-1">
+                  <label>مبلغ قسط سوم :</label>
+                  <input
+                    className="border rounded px-3 py-1 w-full text-center"
+                    value={paymentFields.installment3}
+                    onChange={(e) => handleInstallmentChange(e, "installment3")}
+                    placeholder=""
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label>تاریخ قسط سوم :</label>
+                  <DatePicker
+                    value={paymentFields.date3Obj}
+                    onChange={(date) =>
+                      setPaymentFields((f) => ({
+                        ...f,
+                        date3Obj: date,
+                        date3: date
+                          ? `${date.year}/${date.month
+                              .toString()
+                              .padStart(2, "0")}/${date.day
+                              .toString()
+                              .padStart(2, "0")}`
+                          : "",
+                      }))
+                    }
+                    calendar={persian}
+                    locale={persian_fa}
+                    shouldHighlightWeekends
+                    inputPlaceholder="انتخاب تاریخ"
+                    colorPrimary="#198754"
+                    minDate={minDate}
+                    maxDate={maxDate}
+                    inputClassName={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 ${
+                      paymentErrors.date3 ? "border-red-500" : ""
+                    }`}
+                    renderInput={(props) => (
+                      <div className="flex flex-col">
+                        <input
+                          {...props}
+                          readOnly
+                          className="w-full px-3 py-1 border rounded-md bg-gray-50 cursor-pointer text-center"
+                          onKeyDown={(e) => e.preventDefault()}
+                          onPaste={(e) => e.preventDefault()}
+                          onInput={(e) => e.preventDefault()}
+                          onKeyPress={(e) => e.preventDefault()}
+                          onKeyUp={(e) => e.preventDefault()}
+                          onCompositionStart={(e) => e.preventDefault()}
+                          onCompositionEnd={(e) => e.preventDefault()}
+                          onCompositionUpdate={(e) => e.preventDefault()}
+                          onBeforeInput={(e) => e.preventDefault()}
+                          onSelect={(e) => e.preventDefault()}
+                          onCut={(e) => e.preventDefault()}
+                          onCopy={(e) => e.preventDefault()}
+                          onDrag={(e) => e.preventDefault()}
+                          onDragStart={(e) => e.preventDefault()}
+                          onDrop={(e) => e.preventDefault()}
+                        />
+                        {paymentErrors.date3 && (
+                          <span className="text-red-500 text-sm mt-1">
+                            {paymentErrors.date3}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label>شماره چک :</label>
+                  <input
+                    className="border rounded px-3 py-1 w-full text-center"
+                    value={paymentFields.check3}
+                    onChange={(e) => handleInstallmentChange(e, "check3")}
+                    placeholder=""
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label>نام بانک :</label>
+                  <input
+                    className="border rounded px-3 py-1 w-full text-center"
+                    value={paymentFields.bank3}
+                    onChange={(e) => handleInstallmentChange(e, "bank3")}
+                    placeholder=""
+                  />
+                </div>
               </div>
-              <div className="col-span-1">
-                <label>تاریخ قسط دوم :</label>
-                <DatePicker
-                  value={paymentFields.date2Obj}
-                  onChange={(date) =>
-                    setPaymentFields((f) => ({
-                      ...f,
-                      date2Obj: date,
-                      date2: date
-                        ? `${date.year}/${date.month
-                            .toString()
-                            .padStart(2, "0")}/${date.day
-                            .toString()
-                            .padStart(2, "0")}`
-                        : "",
-                    }))
-                  }
-                  calendar={persian}
-                  locale={persian_fa}
-                  shouldHighlightWeekends
-                  inputPlaceholder="انتخاب تاریخ"
-                  colorPrimary="#198754"
-                  inputClassName="w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
-                  renderInput={(props) => (
-                    <input
-                      {...props}
-                      readOnly
-                      className="w-full px-3 py-1 border rounded-md bg-gray-50 cursor-pointer text-center"
-                    />
-                  )}
-                />
-              </div>
-              <div className="col-span-1">
-                <label>شماره چک :</label>
-                <input
-                  className="border rounded px-3 py-1 w-full text-center"
-                  value={paymentFields.check2}
-                  onChange={(e) =>
-                    setPaymentFields((f) => ({ ...f, check2: e.target.value }))
-                  }
-                  placeholder=""
-                />
-              </div>
-              <div className="col-span-1">
-                <label>نام بانک :</label>
-                <input
-                  className="border rounded px-3 py-1 w-full text-center"
-                  value={paymentFields.bank2}
-                  onChange={(e) =>
-                    setPaymentFields((f) => ({ ...f, bank2: e.target.value }))
-                  }
-                  placeholder=""
-                />
-              </div>
-            </div>
-            {/* قسط سوم */}
-            <div className="grid grid-cols-4 gap-4 mb-4">
-              <div className="col-span-1">
-                <label>مبلغ قسط سوم :</label>
-                <input
-                  className="border rounded px-3 py-1 w-full text-center"
-                  value={paymentFields.installment3}
-                  onChange={(e) =>
-                    setPaymentFields((f) => ({
-                      ...f,
-                      installment3: e.target.value,
-                    }))
-                  }
-                  placeholder=""
-                />
-              </div>
-              <div className="col-span-1">
-                <label>تاریخ قسط سوم :</label>
-                <DatePicker
-                  value={paymentFields.date3Obj}
-                  onChange={(date) =>
-                    setPaymentFields((f) => ({
-                      ...f,
-                      date3Obj: date,
-                      date3: date
-                        ? `${date.year}/${date.month
-                            .toString()
-                            .padStart(2, "0")}/${date.day
-                            .toString()
-                            .padStart(2, "0")}`
-                        : "",
-                    }))
-                  }
-                  calendar={persian}
-                  locale={persian_fa}
-                  shouldHighlightWeekends
-                  inputPlaceholder="انتخاب تاریخ"
-                  colorPrimary="#198754"
-                  inputClassName="w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
-                  renderInput={(props) => (
-                    <input
-                      {...props}
-                      readOnly
-                      className="w-full px-3 py-1 border rounded-md bg-gray-50 cursor-pointer text-center"
-                    />
-                  )}
-                />
-              </div>
-              <div className="col-span-1">
-                <label>شماره چک :</label>
-                <input
-                  className="border rounded px-3 py-1 w-full text-center"
-                  value={paymentFields.check3}
-                  onChange={(e) =>
-                    setPaymentFields((f) => ({ ...f, check3: e.target.value }))
-                  }
-                  placeholder=""
-                />
-              </div>
-              <div className="col-span-1">
-                <label>نام بانک :</label>
-                <input
-                  className="border rounded px-3 py-1 w-full text-center"
-                  value={paymentFields.bank3}
-                  onChange={(e) =>
-                    setPaymentFields((f) => ({ ...f, bank3: e.target.value }))
-                  }
-                  placeholder=""
-                />
-              </div>
+              {paymentErrors.installments && (
+                <div className="text-red-500 text-sm mt-2 text-center">
+                  {paymentErrors.installments}
+                </div>
+              )}
             </div>
             <div className="flex justify-center mt-6">
-              <button className="px-8 py-2 bg-green-700 text-white rounded hover:bg-green-800 font-bold">
+              <button
+                className="px-8 py-2 bg-green-700 text-white rounded hover:bg-green-800 font-bold"
+                onClick={() => {
+                  if (validatePaymentFields()) {
+                    // ادامه فرآیند ثبت نام
+                  }
+                }}
+              >
                 ثبت نام و پرداخت
               </button>
             </div>
