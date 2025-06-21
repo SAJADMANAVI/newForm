@@ -14,6 +14,14 @@ import axios from "axios";
 import Cropper from "react-easy-crop";
 import { getCroppedImg } from "./utils/cropImage"; // اصلاح ایمپورت برای استفاده از اکسپورت معمولی
 
+// تابع فرمت مبلغ سه‌رقمی سه‌رقمی با اسلش
+function formatNumberWithSlash(value) {
+  if (!value) return "";
+  const num = value.replace(/[^0-9]/g, "");
+  if (!num) return "";
+  return num.replace(/\B(?=(\d{3})+(?!\d))/g, "/");
+}
+
 function MainOfMyPage() {
   // در MainOfMyPage.jsx، داخل کامپوننت MainOfMyPage
   // ... (state ها و سایر توابع)
@@ -252,6 +260,10 @@ function MainOfMyPage() {
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  // state جدید برای مدال خطا
+  const [showPaymentErrorModal, setShowPaymentErrorModal] = useState(false);
+  const [paymentErrorModalMessage, setPaymentErrorModalMessage] = useState("");
+
   const validatePaymentFields = () => {
     const initial = parseInt(paymentFields.initial) || 0;
     const installment1 = parseInt(paymentFields.installment1) || 0;
@@ -276,21 +288,30 @@ function MainOfMyPage() {
     }
 
     // بررسی تاریخ‌های اقساط
-    if (installment1 > 0 && !paymentFields.date1) {
-      errors.date1 = "برای قسط اول باید تاریخ انتخاب شود";
+    if (
+      installment1 > 0 &&
+      (!paymentFields.date1 || paymentFields.date1.trim() === "")
+    ) {
+      errors.date1 = "برای قسط اول که مبلغ وارد شده، تاریخ هم باید وارد شود";
       isValid = false;
     }
-    if (installment2 > 0 && !paymentFields.date2) {
-      errors.date2 = "برای قسط دوم باید تاریخ انتخاب شود";
+    if (
+      installment2 > 0 &&
+      (!paymentFields.date2 || paymentFields.date2.trim() === "")
+    ) {
+      errors.date2 = "برای قسط دوم که مبلغ وارد شده، تاریخ هم باید وارد شود";
       isValid = false;
     }
-    if (installment3 > 0 && !paymentFields.date3) {
-      errors.date3 = "برای قسط سوم باید تاریخ انتخاب شود";
+    if (
+      installment3 > 0 &&
+      (!paymentFields.date3 || paymentFields.date3.trim() === "")
+    ) {
+      errors.date3 = "برای قسط سوم که مبلغ وارد شده، تاریخ هم باید وارد شود";
       isValid = false;
     }
 
     setPaymentErrors(errors);
-    return isValid;
+    return { isValid, errors };
   };
 
   const handleInitialPaymentChange = (e) => {
@@ -299,7 +320,13 @@ function MainOfMyPage() {
   };
 
   const handleInstallmentChange = (e, field) => {
-    const value = e.target.value.replace(/[^0-9]/g, "");
+    let value = e.target.value;
+    if (field === "bank1" || field === "bank2" || field === "bank3") {
+      // فقط فاصله‌های اضافی ابتدا و انتها را حذف کن، حروف و عدد مجاز است
+      value = value.trimStart();
+    } else {
+      value = value.replace(/[^0-9]/g, "");
+    }
     setPaymentFields((f) => ({ ...f, [field]: value }));
   };
 
@@ -939,8 +966,96 @@ function MainOfMyPage() {
   };
 
   // تنظیم محدوده تاریخ‌ها
-  const minDate = new Date(2025, 3, 6); // 15 تیر 1404
-  const maxDate = new Date(2026, 2, 21); // 31 خرداد 1405
+  const minDate = new Date(2025, 6, 6); // 15 تیر 1404
+  const maxDate = new Date(2026, 5, 22); // 31 خرداد 1405
+
+  // تابع هندل ثبت نام و پرداخت
+  const handlePaymentSubmit = async (e) => {
+    if (e) e.preventDefault();
+    const { isValid, errors } = validatePaymentFields();
+    if (!isValid) {
+      if (errors.date1) {
+        setPaymentErrorModalMessage(errors.date1);
+        setShowPaymentErrorModal(true);
+        return;
+      }
+      if (errors.date2) {
+        setPaymentErrorModalMessage(errors.date2);
+        setShowPaymentErrorModal(true);
+        return;
+      }
+      if (errors.date3) {
+        setPaymentErrorModalMessage(errors.date3);
+        setShowPaymentErrorModal(true);
+        return;
+      }
+      if (errors.installments) {
+        setPaymentErrorModalMessage(errors.installments);
+        setShowPaymentErrorModal(true);
+        return;
+      }
+      return;
+    }
+
+    // اگر پایه دهم انتخاب شده بود، اطلاعات را مانند یازدهم و دوازدهم به API ارسال کن
+    if (grade && (grade.value === "10" || grade === "دهم")) {
+      // آماده‌سازی داده‌ها
+      const formData = new FormData();
+      formData.append("st_fname", firstName);
+      formData.append("st_lname", lastName);
+      formData.append("st_faname", fatherName);
+      formData.append("st_id_no", nationalCode);
+      formData.append("st_birthdate", birthDate);
+      formData.append("st_birthplace", birthPlace?.value || "");
+      formData.append("st_id_card_exportion", iranSodoor?.value || "");
+      formData.append("st_grade", grade.value);
+      formData.append("st_field", major?.value || "");
+      formData.append(
+        "st_series",
+        `${serialAlpha?.value || ""}${serialNumber}${serialNumber2}`
+      );
+      formData.append("st_phone", contactNumber);
+      formData.append("st_home_phone", homeNumber);
+      formData.append("st_address", address);
+      formData.append("fa_fname", parentFirstName);
+      formData.append("fa_lname", parentLastName);
+      formData.append("fa_job", parentJob);
+      formData.append("fa_phone", parentContact);
+      formData.append("fa_id_no", parentNationalCode);
+      formData.append("fa_education", parentEducation);
+      formData.append("fa_work_address", parentWorkAddress);
+      formData.append("mo_fname", motherFirstName);
+      formData.append("mo_lname", motherLastName);
+      formData.append("mo_job", motherJob);
+      formData.append("mo_phone", motherContact);
+      formData.append("mo_id_no", motherNationalCode);
+      formData.append("mo_education", motherEducation);
+      formData.append("mo_work_address", motherWorkAddress);
+      formData.append("last_school", prevSchool);
+      formData.append("last_avrage", prevAvg);
+      formData.append("last_enzebat", prevDiscipline);
+      if (croppedImage) {
+        formData.append("st_personal_pic", croppedImage, "student_image.png");
+      }
+      if (reportCardFile) {
+        formData.append("last_karname", reportCardFile, "report_card.png");
+      }
+      try {
+        await axios.post(
+          "https://mandegarhs.ir/amoozyar2/api/students/register",
+          formData,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+        setShowSuccessModal(true);
+      } catch (error) {
+        alert("خطا در ثبت اطلاعات! لطفا دوباره تلاش کنید.");
+      }
+      return;
+    }
+    // ... سایر پایه‌ها (یازدهم و دوازدهم و ...)
+  };
 
   return (
     <main className="max-w-screen-lg mx-auto p-6 relative">
@@ -2380,7 +2495,7 @@ function MainOfMyPage() {
                       className={`border rounded px-3 py-1 w-32 sm:w-40 text-center ${
                         paymentErrors.initial ? "border-red-500" : ""
                       }`}
-                      value={paymentFields.initial}
+                      value={formatNumberWithSlash(paymentFields.initial)}
                       onChange={handleInitialPaymentChange}
                       placeholder="۵۰۰۰۰۰۰۰"
                     />
@@ -2398,7 +2513,7 @@ function MainOfMyPage() {
                   <label>مبلغ قسط اول :</label>
                   <input
                     className="border rounded px-3 py-1 w-full text-center"
-                    value={paymentFields.installment1}
+                    value={formatNumberWithSlash(paymentFields.installment1)}
                     onChange={(e) => handleInstallmentChange(e, "installment1")}
                     placeholder=""
                   />
@@ -2486,7 +2601,7 @@ function MainOfMyPage() {
                   <label>مبلغ قسط دوم :</label>
                   <input
                     className="border rounded px-3 py-1 w-full text-center"
-                    value={paymentFields.installment2}
+                    value={formatNumberWithSlash(paymentFields.installment2)}
                     onChange={(e) => handleInstallmentChange(e, "installment2")}
                     placeholder=""
                   />
@@ -2574,7 +2689,7 @@ function MainOfMyPage() {
                   <label>مبلغ قسط سوم :</label>
                   <input
                     className="border rounded px-3 py-1 w-full text-center"
-                    value={paymentFields.installment3}
+                    value={formatNumberWithSlash(paymentFields.installment3)}
                     onChange={(e) => handleInstallmentChange(e, "installment3")}
                     placeholder=""
                   />
@@ -2665,11 +2780,7 @@ function MainOfMyPage() {
             <div className="flex justify-center mt-6">
               <button
                 className="px-8 py-2 bg-green-700 text-white rounded hover:bg-green-800 font-bold"
-                onClick={() => {
-                  if (validatePaymentFields()) {
-                    // ادامه فرآیند ثبت نام
-                  }
-                }}
+                onClick={handlePaymentSubmit}
               >
                 ثبت نام و پرداخت
               </button>
@@ -2688,6 +2799,21 @@ function MainOfMyPage() {
               onClick={() => setShowSuccessModal(false)}
             >
               بستن
+            </button>
+          </div>
+        </div>
+      )}
+      {showPaymentErrorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
+            <h2 className="text-xl font-bold mb-6 text-red-700">
+              {paymentErrorModalMessage}
+            </h2>
+            <button
+              className="mt-4 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+              onClick={() => setShowPaymentErrorModal(false)}
+            >
+              باشه
             </button>
           </div>
         </div>
